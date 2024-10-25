@@ -3,10 +3,9 @@ Example of Duo Accounts API child account creation
 """
 
 import duo_client
-
+import os
 import sys
 import getpass
-
 from pprint import pprint
 
 
@@ -24,15 +23,37 @@ def _get_next_arg(prompt, secure=False):
             return input(prompt)
 
 
+def check_environment_variables():
+    """Check if the required environment variables are set and provide instructions if not"""
+    ikey = os.getenv('DUO_IKEY')
+    skey = os.getenv('DUO_SKEY')
+    host = os.getenv('DUO_HOST')
+
+    if not ikey or not skey or not host:
+        print("Environment variables DUO_IKEY, DUO_SKEY, and DUO_HOST must be set.")
+        print("To set up the environment variables, follow these steps:")
+        print("1. Create a virtual environment: python -m venv env")
+        print("2. Activate the virtual environment:")
+        print("   - On Windows: .\\env\\Scripts\\activate")
+        print("   - On macOS/Linux: source env/bin/activate")
+        print("3. Set the environment variables in the virtual environment:")
+        print("   - On Windows: set DUO_IKEY=<your-integration-key>")
+        print("                 set DUO_SKEY=<your-secret-key>")
+        print("                 set DUO_HOST=<your-api-hostname>")
+        print("   - On macOS/Linux: export DUO_IKEY=<your-integration-key>")
+        print("                     export DUO_SKEY=<your-secret-key>")
+        print("                     export DUO_HOST=<your-api-hostname>")
+        exit(1)
+    
+    return ikey, skey, host
+
+
 def prompt_for_credentials() -> dict:
-    """Collect required API credentials from command line prompts
+    """Collect required API credentials from command line prompts or environment variables
 
-    :return: dictionary containing Duo Accounts API ikey, skey and hostname strings
+    :return: dictionary containing Duo Accounts API ikey, skey, and hostname strings, and account name
     """
-
-    ikey = _get_next_arg('Duo Accounts API integration key ("DI..."): ')
-    skey = _get_next_arg('Duo Accounts API integration secret key: ', secure=True)
-    host = _get_next_arg('Duo Accounts API hostname ("api-....duosecurity.com"): ')
+    ikey, skey, host = check_environment_variables()
     account_name = _get_next_arg('Name for new child account: ')
 
     return {"IKEY": ikey, "SKEY": skey, "APIHOST": host, "ACCOUNT_NAME": account_name}

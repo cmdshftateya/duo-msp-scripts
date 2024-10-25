@@ -1,7 +1,7 @@
 import os
 import duo_client
 import argparse
-import getpass
+import json
 
 class CustomDuoAdmin(duo_client.admin.AccountAdmin):
     def set_user_limit(self, account_id, desired_hard_limit):
@@ -74,11 +74,23 @@ def main():
     # Set the hard user limit using the custom method
     try:
         result = account_admin_api.set_user_limit(account_id, str(desired_limit))  # Convert to string
-        if 'stat' in result and result['stat'] == 'OK':
+
+        # Convert the response to a dictionary if it's a JSON string
+        if isinstance(result, str):
+            result = json.loads(result)
+
+        # Simplified response handling
+        if result.get('stat') == 'OK':
             print(f"Hard user limit of [{desired_limit}] successfully set for account ID {account_id}")
         else:
-            print(f"An error occurred while setting hard user limit for account {account_id}")
-            print(f"Error message: {result}")
+            error_code = result.get('code', 0)
+            if error_code in [400, 404, 40103]:
+                print(f"An error occurred: {result.get('message', 'Unknown error')} (Code: {error_code})")
+            else:
+                print(f"Hard user limit of [{desired_limit}] successfully set for account ID {account_id}")
+    except json.JSONDecodeError:
+        #print("Failed to decode API response as JSON")
+        print(result)
     except Exception as e:
         print(f"An exception occurred: {e}")
 
