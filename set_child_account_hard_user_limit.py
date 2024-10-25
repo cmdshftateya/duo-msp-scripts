@@ -1,4 +1,6 @@
+import os
 import duo_client
+import argparse
 import getpass
 
 class CustomDuoAdmin(duo_client.admin.AccountAdmin):
@@ -7,64 +9,75 @@ class CustomDuoAdmin(duo_client.admin.AccountAdmin):
         endpoint = '/admin/v1/billing/user_limit'
         params = {
             'account_id': account_id,
-            'desired_hard_limit': str(desired_hard_limit)  # Convert to string
+            'user_limit': str(desired_hard_limit)  # Correct parameter name
         }
         response = self.json_api_call('POST', endpoint, params)
         return response
 
 
-def _get_user_input(prompt, secure=False):
-    """Read information from STDIN, using getpass when sensitive information should not be echoed to tty"""
-    if secure is True:
-        return getpass.getpass(prompt)
-    else:
-        return input(prompt)
+def check_environment_variables():
+    """Check if the required environment variables are set and provide instructions if not"""
+    ikey = os.getenv('DUO_IKEY')
+    skey = os.getenv('DUO_SKEY')
+    host = os.getenv('DUO_HOST')
+
+    if not ikey or not skey or not host:
+        print("Environment variables DUO_IKEY, DUO_SKEY, and DUO_HOST must be set.")
+        print("To set up the environment variables, follow these steps:")
+        print("1. Create a virtual environment: python -m venv env")
+        print("2. Activate the virtual environment:")
+        print("   - On Windows: .\\env\\Scripts\\activate")
+        print("   - On macOS/Linux: source env/bin/activate")
+        print("3. Set the environment variables in the virtual environment:")
+        print("   - On Windows: set DUO_IKEY=<your-integration-key>")
+        print("                 set DUO_SKEY=<your-secret-key>")
+        print("                 set DUO_HOST=<your-api-hostname>")
+        print("   - On macOS/Linux: export DUO_IKEY=<your-integration-key>")
+        print("                     export DUO_SKEY=<your-secret-key>")
+        print("                     export DUO_HOST=<your-api-hostname>")
+        exit(1)
+    
+    return ikey, skey, host
 
 
-def prompt_for_credentials() -> dict:
-    """Collect required API credentials from command line prompts"""
+def parse_arguments():
+    """Parse command-line arguments for the child account details and desired limit"""
+    parser = argparse.ArgumentParser(description="Set hard user limit for a Duo subaccount.")
+    parser.add_argument('account_id', type=str, help='Child account ID')
+    parser.add_argument('child_api_host', type=str, help='Child account API hostname')
+    parser.add_argument('desired_limit', type=int, help='Desired hard user limit to apply to subaccount')
 
-    ikey = _get_user_input('Duo Accounts API integration key ("DI..."): ')
-    skey = _get_user_input('Duo Accounts API integration secret key: ', secure=True)
-    host = _get_user_input('Duo Accounts API hostname ("api-....duosecurity.com"): ')
-    account_id = _get_user_input('Child account ID: ')
-    account_apihost = _get_user_input('Child account api_hostname: ')
-    desired_limit = int(_get_user_input('Desired hard user limit to apply to subaccount: '))
-    while desired_limit < 0:
-        print(f"Invalid limit. Please select a value 0 or higher")
-        desired_limit = int(_get_user_input('Desired hard user limit to apply to subaccount: '))
+    args = parser.parse_args()
 
-    return {
-            "ikey": ikey,
-            "skey": skey,
-            "host": host,
-            "account_id": account_id,
-            "child_api_host": account_apihost,
-            "desired_limit": desired_limit,
-    }
+    if args.desired_limit < 0:
+        parser.error("Invalid limit. Please select a value 0 or higher")
+
+    return args.account_id, args.child_api_host, args.desired_limit
+
 
 def main():
     """Main program entry point"""
 
-    inputs = prompt_for_credentials()
+    ikey, skey, host = check_environment_variables()
+    account_id, child_api_host, desired_limit = parse_arguments()
 
     # Initialize the custom admin class with the credentials
     account_admin_api = CustomDuoAdmin(
-        ikey=inputs['ikey'],
-        skey=inputs['skey'],
-        host=inputs['host'],
-        account_id=inputs['account_id']
+        ikey=ikey,
+        skey=skey,
+        host=host,
+        account_id=account_id
     )
 
-    print(f"Setting hard user limit for account ID {inputs['account_id']} to {inputs['desired_limit']}")
+    print(f"Setting hard user limit for account ID {account_id} to {desired_limit}")
 
     # Set the hard user limit using the custom method
     try:
-        result = account_admin_api.set_user_limit(inputs['account_id'], str(inputs['desired_limit']))  # Convert to string
+        result = account_admin_api.set_user_limit(account_id, str(desired_limit))  # Convert to string
         if 'stat' in result and result['stat'] == 'OK':
-            print(f"Hard user limit of [{inputs['desired_limit']}] successfully set for account ID {inputs['account_id']}")
+            print(f"Hard user limit of [{desired_limit}] successfully set for account ID {account_id}")
         else:
-            print(f"An error occurred while setting hard user limit for account {inputs['account_id']}")
+            print(f"An error occurred while setting hard user limit for account {account_id}")
             print(f"Error message: {result}")
     except Exception as e:
         print(f"An exception occurred: {e}")
