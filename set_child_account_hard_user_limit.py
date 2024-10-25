@@ -20,8 +20,13 @@ duo_arg_group.add_argument('--host',
                            help='Duo child account API apihost',
                            required=True
                            )
-parser.add_argument('--child_account_id',
+child_arg_group = parser.add_argument_group('Details of the child account to be modified')
+child_arg_group.add_argument('--child_account_id',
                     help='The Duo account ID of the child account to query.',
+                    required=True
+                    )
+child_arg_group.add_argument('--desired_hard_limit',
+                    help='The desired hard user limit you would like to apply to the child account.',
                     required=True
                     )
 args = parser.parse_args()
