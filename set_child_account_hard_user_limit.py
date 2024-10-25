@@ -72,27 +72,9 @@ def main():
     print(f"Setting hard user limit for account ID {account_id} to {desired_limit}")
 
     # Set the hard user limit using the custom method
-    try:
-        result = account_admin_api.set_user_limit(account_id, str(desired_limit))  # Convert to string
-
-        # Convert the response to a dictionary if it's a JSON string
-        if isinstance(result, str):
-            result = json.loads(result)
-
-        # Simplified response handling
-        if result.get('stat') == 'OK':
-            print(f"Hard user limit of [{desired_limit}] successfully set for account ID {account_id}")
-        else:
-            error_code = result.get('code', 0)
-            if error_code in [400, 404, 40103]:
-                print(f"An error occurred: {result.get('message', 'Unknown error')} (Code: {error_code})")
-            else:
-                print(f"Hard user limit of [{desired_limit}] successfully set for account ID {account_id}")
-    except json.JSONDecodeError:
-        #print("Failed to decode API response as JSON")
-        print(result)
-    except Exception as e:
-        print(f"An exception occurred: {e}")
+    result = account_admin_api.set_user_limit(account_id, str(desired_limit))  # Convert to string
+    print(result)
+    # TODO: Add error handling
 
 if __name__ == '__main__':
     main()
