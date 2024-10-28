@@ -15,12 +15,11 @@ class CustomDuoAdmin(duo_client.admin.AccountAdmin):
         return response
     
     # getter
-    def get_user_limit(self, account_id, desired_hard_limit):
-        """Method to call the hidden /admin/v1/billing/user_limit endpoint to set user limit"""
+    def get_user_limit(self, account_id):
+        """Method to call the hidden /admin/v1/billing/user_limit endpoint to get user limit"""
         endpoint = '/admin/v1/billing/user_limit'
         params = {
             'account_id': account_id,
-            'user_limit': str(desired_hard_limit)  # Correct parameter name
         }
         response = self.json_api_call('GET', endpoint, params)
         return response
@@ -53,24 +52,28 @@ def check_environment_variables():
 
 def parse_arguments():
     """Parse command-line arguments for the child account details and desired limit"""
-    parser = argparse.ArgumentParser(description="Set hard user limit for a Duo subaccount.")
+    parser = argparse.ArgumentParser(description="Set or get hard user limit for a Duo subaccount.")
+    parser.add_argument('mode', choices=['get', 'set'], help='Mode of operation: get or set')
     parser.add_argument('account_id', type=str, help='Child account ID')
     parser.add_argument('child_api_host', type=str, help='Child account API hostname')
-    parser.add_argument('desired_limit', type=int, help='Desired hard user limit to apply to subaccount')
+    parser.add_argument('desired_limit', type=int, nargs='?', help='Desired hard user limit to apply to subaccount (required for set mode)')
 
     args = parser.parse_args()
 
-    if args.desired_limit < 0:
+    if args.mode == 'set' and args.desired_limit is None:
+        parser.error("desired_limit is required when mode is set")
+
+    if args.desired_limit is not None and args.desired_limit < 0:
         parser.error("Invalid limit. Please select a value 0 or higher")
 
-    return args.account_id, args.child_api_host, args.desired_limit
+    return args.mode, args.account_id, args.child_api_host, args.desired_limit
 
 
 def main():
     """Main program entry point"""
 
     ikey, skey, host = check_environment_variables()
-    account_id, child_api_host, desired_limit = parse_arguments()
+    mode, account_id, child_api_host, desired_limit = parse_arguments()
 
     # Initialize the custom admin class with the credentials
     account_admin_api = CustomDuoAdmin(
@@ -80,10 +83,15 @@ def main():
         account_id=account_id
     )
 
-    print(f"Setting hard user limit for account ID {account_id} to {desired_limit}")
+    if mode == 'set':
+        print(f"Setting hard user limit for account ID {account_id} to {desired_limit}")
+        # Set the hard user limit using the custom method
+        result = account_admin_api.set_user_limit(account_id, str(desired_limit))  # Convert to string
+    elif mode == 'get':
+        print(f"Getting hard user limit for account ID {account_id}")
+        # Get the hard user limit using the custom method
+        result = account_admin_api.get_user_limit(account_id)
 
-    # Set the hard user limit using the custom method
-    result = account_admin_api.set_user_limit(account_id, str(desired_limit))  # Convert to string
     print(result)
     # TODO: Add error handling
 
