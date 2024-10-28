@@ -1,9 +1,9 @@
 import os
 import duo_client
 import argparse
-import json
 
 class CustomDuoAdmin(duo_client.admin.AccountAdmin):
+    # setter
     def set_user_limit(self, account_id, desired_hard_limit):
         """Method to call the hidden /admin/v1/billing/user_limit endpoint to set user limit"""
         endpoint = '/admin/v1/billing/user_limit'
@@ -12,6 +12,17 @@ class CustomDuoAdmin(duo_client.admin.AccountAdmin):
             'user_limit': str(desired_hard_limit)  # Correct parameter name
         }
         response = self.json_api_call('POST', endpoint, params)
+        return response
+    
+    # getter
+    def get_user_limit(self, account_id, desired_hard_limit):
+        """Method to call the hidden /admin/v1/billing/user_limit endpoint to set user limit"""
+        endpoint = '/admin/v1/billing/user_limit'
+        params = {
+            'account_id': account_id,
+            'user_limit': str(desired_hard_limit)  # Correct parameter name
+        }
+        response = self.json_api_call('GET', endpoint, params)
         return response
 
 
