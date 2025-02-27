@@ -176,17 +176,17 @@ def main():
                     
                     result = admin_manager.create_admin(name, email, phone, role)
                     print(f"Admin created successfully: {result.get('name')} ({result.get('email')})")
+                    
                 except Exception as e:
                     print(f"Error: {e}")
             
             else:
-                print("Unknown command. Please enter a valid option.")
-    
+                print(f"Unknown command: {command}")
     except KeyboardInterrupt:
-        print("\nOperation cancelled by user.")
+        print("\nProgram interrupted. Exiting...")
         sys.exit(0)
     except Exception as e:
-        print(f"Unexpected error: {e}")
+        print(f"Fatal error: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":
