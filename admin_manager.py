@@ -1,4 +1,16 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
+"""
+Duo Security Admin Manager Script
+
+This script manages Duo Security admins by listing existing admins or creating new ones.
+
+Required environment variables:
+- DUO_IKEY: Admin API integration key
+- DUO_SKEY: Admin API secret key
+- DUO_HOST: Admin API hostname
+"""
+
+import os
 import sys
 import duo_client
 from datetime import datetime
@@ -73,20 +85,27 @@ def main():
     print("Duo Security Admin Manager")
     print("--------------------------")
     
+    # Load credentials from environment variables
+    required_vars = {
+        'DUO_IKEY': 'Admin API integration key',
+        'DUO_SKEY': 'Admin API secret key',
+        'DUO_HOST': 'Admin API hostname'
+    }
+    
+    missing_vars = [var for var, desc in required_vars.items() if not os.environ.get(var)]
+    if missing_vars:
+        print("Error: The following required environment variables are not set:")
+        for var in missing_vars:
+            print(f"- {var} ({required_vars[var]})")
+        print("Please set these variables and try again.")
+        sys.exit(1)
+    
     try:
-        credentials = input('Enter credentials (ikey skey host): ')
-        cred_parts = credentials.strip().split()
-        
-        if len(cred_parts) != 3:
-            print("Error: Please provide exactly 3 values: ikey skey host")
-            sys.exit(1)
-        
-        integration, secret, hostname = cred_parts
-        
+        # Initialize AdminManager with environment variables
         admin_manager = AdminManager(
-            ikey=integration,
-            skey=secret,
-            host=hostname
+            ikey=os.environ['DUO_IKEY'],
+            skey=os.environ['DUO_SKEY'],
+            host=os.environ['DUO_HOST']
         )
         
         print("\nConnected to Duo Security API")
