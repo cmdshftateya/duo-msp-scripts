@@ -5,9 +5,9 @@ Duo Security Admin Manager Script
 This script manages Duo Security admins by listing existing admins or creating new ones.
 
 Required environment variables:
-- DUO_IKEY: Admin API integration key
-- DUO_SKEY: Admin API secret key
-- DUO_HOST: Admin API hostname
+- DUO_PARENT_IKEY: Parent Admin API integration key
+- DUO_PARENT_SKEY: Parent Admin API secret key
+- DUO_PARENT_HOST: Parent Admin API hostname
 """
 
 import os
@@ -87,9 +87,9 @@ def main():
     
     # Load credentials from environment variables
     required_vars = {
-        'DUO_IKEY': 'Admin API integration key',
-        'DUO_SKEY': 'Admin API secret key',
-        'DUO_HOST': 'Admin API hostname'
+        'DUO_PARENT_IKEY': 'Admin API integration key',
+        'DUO_PARENT_SKEY': 'Admin API secret key',
+        'DUO_PARENT_HOST': 'Admin API hostname'
     }
     
     missing_vars = [var for var, desc in required_vars.items() if not os.environ.get(var)]
@@ -103,9 +103,9 @@ def main():
     try:
         # Initialize AdminManager with environment variables
         admin_manager = AdminManager(
-            ikey=os.environ['DUO_IKEY'],
-            skey=os.environ['DUO_SKEY'],
-            host=os.environ['DUO_HOST']
+            ikey=os.environ['DUO_PARENT_IKEY'],
+            skey=os.environ['DUO_PARENT_SKEY'],
+            host=os.environ['DUO_PARENT_HOST']
         )
         
         print("\nConnected to Duo Security API")
