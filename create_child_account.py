@@ -1,37 +1,54 @@
+import os
+import sys
 import duo_client
-import getpass
 
-def prompt_for_credentials() -> dict:
-    """Collect required API credentials and account name from a single input line
+def get_api_credentials() -> dict:
+    """Retrieve API credentials from environment variables."""
+    required_vars = ["DUO_ACCOUNTS_IKEY", "DUO_ACCOUNTS_SKEY", "DUO_ACCOUNTS_HOST"]
+    
+    missing_vars = [var for var in required_vars if not os.getenv(var)]
+    if missing_vars:
+        print(f"Error: Missing environment variables: {', '.join(missing_vars)}")
+        sys.exit(1)
 
-    :return: dictionary containing Duo Accounts API ikey, skey, host, and account name
-    """
-    user_input = input('Enter the integration key, secret key, API hostname, and account name separated by spaces:\n')
-    ikey, skey, host, account_name = user_input.split()
+    return {
+        "IKEY": os.getenv("DUO_ACCOUNTS_IKEY="),
+        "SKEY": os.getenv("DUO_ACCOUNTS_SKEY="),
+        "APIHOST": os.getenv("DUO_ACCOUNTS_HOST="),
+    }
 
-    return {"IKEY": ikey, "SKEY": skey, "APIHOST": host, "ACCOUNT_NAME": account_name}
+def create_child_account(account_client, account_name):
+    """Create a Duo child account with the given name."""
+    print(f"Creating child account with name [{account_name}]")
+    child_account = account_client.create_account(account_name)
 
+    if 'account_id' in child_account:
+        print(f"Child account for [{account_name}] created successfully.")
+    else:
+        print(f"An unexpected error occurred while creating child account for {account_name}")
+    
+    print(child_account)
 
 def main():
     """Main program entry point"""
-
-    inputs = prompt_for_credentials()
-
+    credentials = get_api_credentials()
     account_client = duo_client.Accounts(
-        ikey=inputs['IKEY'],
-        skey=inputs['SKEY'],
-        host=inputs['APIHOST']
+        ikey=credentials["IKEY"],
+        skey=credentials["SKEY"],
+        host=credentials["APIHOST"]
     )
 
-    print(f"Creating child account with name [{inputs['ACCOUNT_NAME']}]")
-    child_account = account_client.create_account(inputs['ACCOUNT_NAME'])
-
-    if 'account_id' in child_account:
-        print(f"Child account for [{inputs['ACCOUNT_NAME']}] created successfully.")
+    if len(sys.argv) > 1:
+        # Batch mode: Loop through provided arguments and create accounts
+        for account_name in sys.argv[1:]:
+            create_child_account(account_client, account_name)
     else:
-        print(f"An unexpected error occurred while creating child account for {inputs['ACCOUNT_NAME']}")
-    print(child_account)
-
+        # Interactive mode: Prompt user for an account name
+        account_name = input("Enter account name to create: ").strip()
+        if account_name:
+            create_child_account(account_client, account_name)
+        else:
+            print("No account name provided. Exiting.")
 
 if __name__ == '__main__':
     main()

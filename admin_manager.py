@@ -20,6 +20,10 @@ class AdminManager(duo_client.Admin):
         params = {k: v for k, v in [('name', name), ('phone', phone), ('role', self.map_role(role)), ('subaccount_role', self.map_subaccount_role(subaccount_role))] if v}
         return self.json_api_call('POST', f'/admin/v1/admins/{admin_id}', params)
     
+    def sync_admin(self, directory_key, email):
+        params = {'email': email}
+        return self.json_api_call('POST', f'/admin/v1/admins/directorysync/{directory_key}/syncadmin', params)
+    
     def map_role(self, role):
         role_mapping = {
             "owner": "Owner", "administrator": "Administrator", "application manager": "Application Manager",
@@ -81,6 +85,15 @@ def update_admin(admin_manager):
     except Exception as e:
         print(f"Error: {e}")
 
+def sync_admin(admin_manager):
+    try:
+        directory_key = input("Enter Directory Key: ").strip()
+        email = input("Enter Admin Email: ").strip()
+        result = admin_manager.sync_admin(directory_key, email)
+        print(f"Sync Result: {result}")
+    except Exception as e:
+        print(f"Error: {e}")
+
 def main():
     print("Duo Security Admin Manager\n--------------------------")
     required_vars = ['DUO_PARENT_IKEY', 'DUO_PARENT_SKEY', 'DUO_PARENT_HOST']
@@ -91,10 +104,10 @@ def main():
     admin_manager = AdminManager(os.environ['DUO_PARENT_IKEY'], os.environ['DUO_PARENT_SKEY'], os.environ['DUO_PARENT_HOST'])
     print("Connected to Duo Security API")
     
-    commands = {"get_admins": list_admins, "create_admin": create_admin, "update_admin": update_admin}
+    commands = {"get_admins": list_admins, "create_admin": create_admin, "update_admin": update_admin, "sync_admin": sync_admin}
     
     while True:
-        print("\nCommands: get_admins, create_admin, update_admin, exit")
+        print("\nCommands: get_admins, create_admin, update_admin, sync_admin, exit")
         command = get_admin_input()
         if command in ["exit", "quit"]:
             print("Exiting program.")
