@@ -5,13 +5,14 @@ Duo Security Account Reporting Script
 This script generates a comprehensive report of users across a Duo Security parent account
 and all associated subaccounts, using both the Admin API and Accounts API.
 
-Required environment variables:
-- DUO_PARENT_IKEY: Parent Admin API integration key
-- DUO_PARENT_SKEY: Parent Admin API secret key
-- DUO_PARENT_HOST: Parent Admin API hostname
-- DUO_ACCOUNTS_IKEY: Accounts API integration key
-- DUO_ACCOUNTS_SKEY: Accounts API secret key
-- DUO_ACCOUNTS_HOST: Accounts API hostname
+Configuration:
+    The script requires a duo.conf file with the following credentials:
+    - DUO_PARENT_IKEY: Parent Admin API integration key
+    - DUO_PARENT_SKEY: Parent Admin API secret key
+    - DUO_PARENT_HOST: Parent Admin API hostname
+    - DUO_ACCOUNTS_IKEY: Accounts API integration key
+    - DUO_ACCOUNTS_SKEY: Accounts API secret key
+    - DUO_ACCOUNTS_HOST: Accounts API hostname
 """
 
 import os
@@ -20,7 +21,33 @@ from datetime import datetime, timezone
 import time
 import pandas as pd
 from tabulate import tabulate
+
 import duo_client
+
+def load_config():
+    """Load configuration from duo.conf file."""
+    config = {}
+    try:
+        with open('duo.conf', 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#'):
+                    key, value = line.split('=', 1)
+                    config[key.strip()] = value.strip()
+    except FileNotFoundError:
+        print("Error: duo.conf file not found. Please create it with your Duo Security API credentials.")
+        sys.exit(1)
+    
+    required_keys = [
+        'DUO_PARENT_IKEY', 'DUO_PARENT_SKEY', 'DUO_PARENT_HOST',
+        'DUO_ACCOUNTS_IKEY', 'DUO_ACCOUNTS_SKEY', 'DUO_ACCOUNTS_HOST'
+    ]
+    missing_keys = [key for key in required_keys if key not in config]
+    if missing_keys:
+        print(f"Error: Missing required credentials in duo.conf: {', '.join(missing_keys)}")
+        sys.exit(1)
+    
+    return config
 
 def human_time(timestamp):
     """Translate unix time into human readable string."""
@@ -94,35 +121,20 @@ def main():
     print("Duo Security MSP User Report")
     print("===========================")
     
-    # Load credentials from environment variables
-    required_vars = {
-        'DUO_PARENT_IKEY': 'Parent Admin API integration key',
-        'DUO_PARENT_SKEY': 'Parent Admin API secret key',
-        'DUO_PARENT_HOST': 'Parent Admin API hostname',
-        'DUO_ACCOUNTS_IKEY': 'Accounts API integration key',
-        'DUO_ACCOUNTS_SKEY': 'Accounts API secret key',
-        'DUO_ACCOUNTS_HOST': 'Accounts API hostname'
-    }
-    
-    missing_vars = [var for var, desc in required_vars.items() if not os.environ.get(var)]
-    if missing_vars:
-        print("Error: The following required environment variables are not set:")
-        for var in missing_vars:
-            print(f"- {var} ({required_vars[var]})")
-        print("Please set these variables and try again.")
-        sys.exit(1)
+    # Load configuration from duo.conf
+    config = load_config()
     
     # Initialize API clients
     parent_admin_client = duo_client.Admin(
-        ikey=os.environ['DUO_PARENT_IKEY'],
-        skey=os.environ['DUO_PARENT_SKEY'],
-        host=os.environ['DUO_PARENT_HOST']
+        ikey=config['DUO_PARENT_IKEY'],
+        skey=config['DUO_PARENT_SKEY'],
+        host=config['DUO_PARENT_HOST']
     )
     
     accounts_client = duo_client.Accounts(
-        ikey=os.environ['DUO_ACCOUNTS_IKEY'],
-        skey=os.environ['DUO_ACCOUNTS_SKEY'],
-        host=os.environ['DUO_ACCOUNTS_HOST']
+        ikey=config['DUO_ACCOUNTS_IKEY'],
+        skey=config['DUO_ACCOUNTS_SKEY'],
+        host=config['DUO_ACCOUNTS_HOST']
     )
     
     all_users = []

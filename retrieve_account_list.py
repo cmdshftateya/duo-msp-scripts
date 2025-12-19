@@ -1,63 +1,46 @@
-"""
-Example of Duo account API uaer accountentication with synchronous request/response
-"""
-
-import duo_client
+import os
 import sys
-import getpass
-
+import duo_client
 from pprint import pprint
+from tabulate import tabulate
 
-
-argv_iter = iter(sys.argv[1:])
-
-
-def _get_next_arg(prompt, secure=False):
-    """Read information from STDIN, using getpass when sensitive information should not be echoed to tty"""
-    try:
-        return next(argv_iter)
-    except StopIteration:
-        if secure is True:
-            return getpass.getpass(prompt)
-        else:
-            return input(prompt)
-
-
-def prompt_for_credentials() -> dict:
-    """Collect required API credentials from command line prompts
-
-    :return: dictionary containing Duo Accounts API ikey, skey and hostname strings
-    """
-
-    ikey = _get_next_arg('Duo Accounts API integration key ("DI..."): ')
-    skey = _get_next_arg('Duo Accounts API integration secret key: ', secure=True)
-    host = _get_next_arg('Duo Accounts API hostname ("api-....duosecurity.com"): ')
-
-    return {"IKEY": ikey, "SKEY": skey, "APIHOST": host}
-
+def get_api_credentials() -> dict:
+    """Retrieve API credentials from environment variables."""
+    credentials = {
+        "IKEY": os.getenv("DUO_ACCOUNTS_IKEY"),
+        "SKEY": os.getenv("DUO_ACCOUNTS_SKEY"),
+        "APIHOST": os.getenv("DUO_ACCOUNTS_HOST")
+    }
+    
+    # Raise an error if any of the credentials are missing
+    if not credentials["IKEY"] or not credentials["SKEY"] or not credentials["APIHOST"]:
+        raise ValueError("Missing required environment variables: DUO_ACCOUNTS_IKEY, DUO_ACCOUNTS_SKEY, or DUO_ACCOUNTS_HOST")
+    
+    return credentials
 
 def main():
     """Main program entry point"""
-
-    inputs = prompt_for_credentials()
-
+    credentials = get_api_credentials()
     account_client = duo_client.Accounts(
-            ikey=inputs['IKEY'],
-            skey=inputs['SKEY'],
-            host=inputs['APIHOST']
+        ikey=credentials['IKEY'],
+        skey=credentials['SKEY'],
+        host=credentials['APIHOST']
     )
-
+    
     child_accounts = account_client.get_child_accounts()
-
+    
     if isinstance(child_accounts, list):
-        # Expected list of child accounts returned
+        # Prepare data for tabulation
+        table_data = []
         for child_account in child_accounts:
-            print(child_account)
-
-    if isinstance(child_accounts, dict):
+            table_data.append([child_account['account_id'], child_account['api_hostname'], child_account['name']])
+        
+        # Print data as a clean table
+        headers = ["Account ID", "API Hostname", "Name"]
+        print(tabulate(table_data, headers=headers, tablefmt="grid"))
+    elif isinstance(child_accounts, dict):
         # Non-successful response returned
-        print(child_accounts)
-
+        pprint(child_accounts)
 
 if __name__ == '__main__':
     main()

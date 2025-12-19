@@ -12,22 +12,27 @@ def get_api_credentials() -> dict:
         sys.exit(1)
 
     return {
-        "IKEY": os.getenv("DUO_ACCOUNTS_IKEY="),
-        "SKEY": os.getenv("DUO_ACCOUNTS_SKEY="),
-        "APIHOST": os.getenv("DUO_ACCOUNTS_HOST="),
+        "IKEY": os.getenv("DUO_ACCOUNTS_IKEY"),
+        "SKEY": os.getenv("DUO_ACCOUNTS_SKEY"),
+        "APIHOST": os.getenv("DUO_ACCOUNTS_HOST"),
     }
 
 def create_child_account(account_client, account_name):
     """Create a Duo child account with the given name."""
-    print(f"Creating child account with name [{account_name}]")
-    child_account = account_client.create_account(account_name)
+    account_name = account_name.strip()
+    if not account_name:
+        print("Error: Account name cannot be empty. Skipping...")
+        return
 
-    if 'account_id' in child_account:
-        print(f"Child account for [{account_name}] created successfully.")
-    else:
-        print(f"An unexpected error occurred while creating child account for {account_name}")
-    
-    print(child_account)
+    print(f"Creating child account with name: [{account_name}]")
+    try:
+        child_account = account_client.create_account(account_name)
+        if 'account_id' in child_account:
+            print(f"✅ Successfully created child account: [{account_name}]")
+        else:
+            print(f"⚠️ Unexpected response when creating account [{account_name}]: {child_account}")
+    except Exception as e:
+        print(f"❌ Failed to create account [{account_name}]: {str(e)}")
 
 def main():
     """Main program entry point"""
