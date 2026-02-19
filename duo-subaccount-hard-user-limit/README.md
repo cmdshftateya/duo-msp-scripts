@@ -1,5 +1,7 @@
 # DuoSubaccountUserLimit
 
+> **Disclaimer:** This is an unofficial tool and is not supported by Cisco or Duo Security. It relies on an undocumented API endpoint that may change or be removed without notice. Use at your own risk.
+
 PowerShell module for MSP admins to list Duo child accounts and get/set hard user limits via the undocumented `/admin/v1/billing/user_limit` endpoint.
 
 No dependency on the DuoSecurity gallery module — signing is self-contained.
