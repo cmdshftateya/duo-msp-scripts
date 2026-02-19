@@ -4,8 +4,6 @@
 
 PowerShell module for MSP admins to list Duo child accounts and get/set hard user limits via the undocumented `/admin/v1/billing/user_limit` endpoint.
 
-No dependency on the DuoSecurity gallery module — signing is self-contained.
-
 ## Requirements
 
 - PowerShell 7+
@@ -20,17 +18,6 @@ $env:DUO_ACCOUNTS_IKEY = 'your-accounts-integration-key'
 $env:DUO_ACCOUNTS_SKEY = 'your-accounts-secret-key'
 $env:DUO_ACCOUNTS_HOST = 'api-accounts.duosecurity.com'
 ```
-
-For persistent credentials, add these to your PowerShell profile (`$PROFILE`) or use a secrets manager.
-
-### Why environment variables?
-
-PowerShell has no standard `.conf` convention. Environment variables are the idiomatic approach for:
-- Compatibility with CI/CD runners (GitHub Actions, Azure Pipelines, etc.)
-- Consistency with the existing Python scripts in this repo
-- Avoiding credentials at rest in plain text files
-
-If you want secrets stored securely on a workstation, the [Microsoft.PowerShell.SecretManagement](https://learn.microsoft.com/en-us/powershell/utility-modules/secretmanagement/overview) module is the right tool — load secrets from it and assign to `$env:` before importing this module.
 
 ## Import
 
@@ -51,7 +38,8 @@ Returns objects with `name`, `account_id`, `api_hostname`, and other fields from
 ### Get user limit for a specific account
 
 ```powershell
-Get-DuoUserLimit -AccountId DA12345 -ApiHostname api-XXXXXXXX.duosecurity.com
+Get-DuoUserLimit -AccountId DA12345 `
+    -ApiHostname api-XXXXXXXX.duosecurity.com
 ```
 
 ### Get user limits for all child accounts
@@ -63,31 +51,103 @@ Get-DuoChildAccounts | Get-DuoUserLimit
 ### Set a user limit
 
 ```powershell
-Set-DuoUserLimit -AccountId DA12345 -ApiHostname api-XXXXXXXX.duosecurity.com -UserLimit 100
+Set-DuoUserLimit -AccountId DA12345 `
+    -ApiHostname api-XXXXXXXX.duosecurity.com `
+    -UserLimit 100
 ```
 
 ### Set a limit by account name (using pipeline)
 
 ```powershell
-Get-DuoChildAccounts | Where-Object name -eq 'Acme Corp' | Set-DuoUserLimit -UserLimit 50
+Get-DuoChildAccounts |
+    Where-Object name -eq 'Acme Corp' |
+    Set-DuoUserLimit -UserLimit 50
 ```
 
 ### Remove a limit (set to 0)
 
 ```powershell
-Set-DuoUserLimit -AccountId DA12345 -ApiHostname api-XXXXXXXX.duosecurity.com -UserLimit 0
+Set-DuoUserLimit -AccountId DA12345 `
+    -ApiHostname api-XXXXXXXX.duosecurity.com `
+    -UserLimit 0
 ```
 
 ### Preview a set operation without applying it (-WhatIf)
 
 ```powershell
-Get-DuoChildAccounts | Where-Object name -eq 'Acme Corp' | Set-DuoUserLimit -UserLimit 50 -WhatIf
+Get-DuoChildAccounts |
+    Where-Object name -eq 'Acme Corp' |
+    Set-DuoUserLimit -UserLimit 50 -WhatIf
 ```
 
 ### Bulk report: all accounts with their current limits
 
 ```powershell
 Get-DuoChildAccounts | Get-DuoUserLimit | Format-Table
+```
+
+## Example walkthrough
+
+A full session: list accounts, check limits, set limits on a couple, then remove one.
+
+```powershell
+# 1. Import the module
+Import-Module /path/to/duo-subaccount-hard-user-limit/DuoSubaccountUserLimit.psd1
+
+# 2. Set credentials
+$env:DUO_ACCOUNTS_IKEY = 'DIXXXXXXXXXXXXXXXXXX'
+$env:DUO_ACCOUNTS_SKEY = 'your-accounts-secret-key'
+$env:DUO_ACCOUNTS_HOST = 'api-accounts.duosecurity.com'
+
+# 3. List all child accounts
+Get-DuoChildAccounts
+
+# account_id             api_hostname                      name
+# ----------             ------------                      ----
+# DAXXXXXXXXXXXXXXXXXX   api-XXXXXXXX.duosecurity.com      Acme Corp
+# DAYYYYYYYYYYYYYYYYYY   api-YYYYYYYY.duosecurity.com      Globex Corporation
+# DAZZZZZZZZZZZZZZZZZZ   api-ZZZZZZZZ.duosecurity.com      Initech
+
+# 4. Check current limits across all accounts
+Get-DuoChildAccounts | Get-DuoUserLimit | Format-Table
+
+# account_id             user_limit
+# ----------             ----------
+# DAXXXXXXXXXXXXXXXXXX   Not set
+# DAYYYYYYYYYYYYYYYYYY   Not set
+# DAZZZZZZZZZZZZZZZZZZ   Not set
+
+# 5. Set a limit of 50 on Acme Corp
+Get-DuoChildAccounts |
+    Where-Object name -eq 'Acme Corp' |
+    Set-DuoUserLimit -UserLimit 50
+
+# 6. Set a limit of 100 on Globex Corporation
+Get-DuoChildAccounts |
+    Where-Object name -eq 'Globex Corporation' |
+    Set-DuoUserLimit -UserLimit 100
+
+# 7. Verify the limits were applied
+Get-DuoChildAccounts | Get-DuoUserLimit | Format-Table
+
+# account_id             user_limit
+# ----------             ----------
+# DAXXXXXXXXXXXXXXXXXX   50
+# DAYYYYYYYYYYYYYYYYYY   100
+# DAZZZZZZZZZZZZZZZZZZ   Not set
+
+# 8. Remove the limit from Acme Corp (set to 0)
+Set-DuoUserLimit -AccountId 'DAXXXXXXXXXXXXXXXXXX' `
+    -ApiHostname 'api-XXXXXXXX.duosecurity.com' `
+    -UserLimit 0
+
+# 9. Confirm it was removed
+Get-DuoUserLimit -AccountId 'DAXXXXXXXXXXXXXXXXXX' `
+    -ApiHostname 'api-XXXXXXXX.duosecurity.com'
+
+# account_id             user_limit
+# ----------             ----------
+# DAXXXXXXXXXXXXXXXXXX   Not set
 ```
 
 ## How it works
@@ -97,7 +157,7 @@ Get-DuoChildAccounts | Get-DuoUserLimit | Format-Table
 The module uses the **Accounts API credentials** with the **child account's API hostname** — the standard Duo MSP authentication pattern:
 
 ```
-Accounts IKEY + Accounts SKEY  →  signed against child account's hostname
+Accounts IKEY + Accounts SKEY  ->  signed against child account's hostname
 ```
 
 This is the same pattern used in the Python scripts in this repo.
@@ -105,23 +165,24 @@ This is the same pattern used in the Python scripts in this repo.
 ### Signing
 
 Duo uses HMAC-SHA1 over a canonical string of:
+
 ```
-date\nMETHOD\nhost\npath\nparams
+date / METHOD / host / path / params
 ```
 
-This is handled internally by `Invoke-DuoSignedRequest` (a private function — not callable directly).
+This is handled internally and not exposed as a callable function.
 
 ## Module structure
 
 ```
 duo-subaccount-hard-user-limit/
-├── DuoSubaccountUserLimit.psd1      # Module manifest
-├── DuoSubaccountUserLimit.psm1      # Module loader
-├── Private/
-│   ├── Invoke-DuoSignedRequest.ps1  # HMAC-SHA1 signing + HTTP (not exported)
-│   └── Get-DuoCredentials.ps1       # Reads env vars, throws if missing (not exported)
-└── Public/
-    ├── Get-DuoChildAccounts.ps1
-    ├── Get-DuoUserLimit.ps1
-    └── Set-DuoUserLimit.ps1
+  DuoSubaccountUserLimit.psd1      Module manifest
+  DuoSubaccountUserLimit.psm1      Module loader
+  Private/
+    Invoke-DuoSignedRequest.ps1    HMAC-SHA1 signing + HTTP (not exported)
+    Get-DuoCredentials.ps1         Reads env vars (not exported)
+  Public/
+    Get-DuoChildAccounts.ps1
+    Get-DuoUserLimit.ps1
+    Set-DuoUserLimit.ps1
 ```
