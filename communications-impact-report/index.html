@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Communications Impact Report</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 13px; background: #f4f5f7; color: #1b2a4a;
+    display: flex; min-height: 100vh;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    width: 56px; background: #1b2a4a; flex-shrink: 0;
+    display: flex; flex-direction: column; align-items: center;
+    padding-top: 16px; gap: 24px;
+  }
+  .sidebar-logo {
+    width: 32px; height: 32px; background: #2d9cdb; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-weight: 800; font-size: 14px; letter-spacing: -1px;
+  }
+  .sidebar-icon {
+    width: 28px; height: 28px; border-radius: 6px;
+    background: rgba(255,255,255,0.07);
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,0.45); font-size: 14px; cursor: default;
+  }
+  .sidebar-icon.active { background: rgba(45,156,219,0.25); color: #2d9cdb; }
+
+  /* Main layout */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .topbar {
+    background: #fff; border-bottom: 1px solid #e2e5ea;
+    padding: 0 24px; height: 48px;
+    display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+  }
+  .topbar-title { font-size: 15px; font-weight: 600; color: #1b2a4a; }
+  .topbar-meta { font-size: 11px; color: #8a93a2; }
+  .content { padding: 24px; overflow-y: auto; flex: 1; }
+
+  /* Section labels */
+  .section-label {
+    font-size: 11px; font-weight: 600; color: #8a93a2;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    margin-bottom: 10px; margin-top: 28px;
+  }
+  .section-label:first-child { margin-top: 0; }
+
+  /* Credentials panel */
+  .creds-panel {
+    background: #fff; border: 1px solid #e2e5ea; border-radius: 8px;
+    padding: 16px 20px; margin-bottom: 28px;
+  }
+  .creds-panel summary {
+    font-size: 13px; font-weight: 600; color: #1b2a4a;
+    cursor: pointer; user-select: none; display: flex; align-items: center; gap: 6px;
+    list-style: none;
+  }
+  .creds-panel summary::-webkit-details-marker { display: none; }
+  .creds-panel summary::before {
+    content: '▸'; font-size: 10px; color: #8a93a2; transition: transform 0.15s;
+  }
+  .creds-panel[open] summary::before { transform: rotate(90deg); }
+  .creds-fields {
+    display: grid; grid-template-columns: 1fr 1fr 1fr auto;
+    gap: 10px; align-items: flex-end; margin-top: 14px;
+  }
+  .field-group { display: flex; flex-direction: column; gap: 4px; }
+  .field-group label { font-size: 11px; font-weight: 600; color: #8a93a2; text-transform: uppercase; letter-spacing: 0.05em; }
+  .field-group input {
+    padding: 7px 10px; border: 1px solid #d0d5dd; border-radius: 6px;
+    font-size: 12px; color: #1b2a4a; outline: none; background: #fff;
+    font-family: "SF Mono", "Consolas", monospace;
+  }
+  .field-group input:focus { border-color: #2d9cdb; box-shadow: 0 0 0 2px rgba(45,156,219,0.15); }
+  .btn-save {
+    padding: 7px 16px; background: #2d9cdb; color: #fff;
+    border: none; border-radius: 6px; font-size: 12px; font-weight: 600;
+    cursor: pointer; white-space: nowrap;
+  }
+  .btn-save:hover { background: #2389c0; }
+  .creds-saved-note { font-size: 11px; color: #2d9cdb; margin-top: 8px; display: none; }
+
+  /* Communication cards */
+  .cards-grid { display: flex; flex-direction: column; gap: 12px; }
+  .comm-card {
+    background: #fff; border: 1px solid #e2e5ea; border-radius: 8px;
+    padding: 18px 20px; display: flex; align-items: flex-start;
+    justify-content: space-between; gap: 20px;
+  }
+  .comm-card-body { flex: 1; }
+  .comm-card-meta { font-size: 11px; color: #8a93a2; margin-bottom: 4px; }
+  .comm-card-title { font-size: 14px; font-weight: 600; color: #1b2a4a; margin-bottom: 6px; }
+  .comm-card-desc { font-size: 12.5px; color: #4a5568; line-height: 1.5; }
+  .comm-card-actions { flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+  .btn-impact {
+    padding: 8px 18px; background: #2d9cdb; color: #fff;
+    border: none; border-radius: 6px; font-size: 12px; font-weight: 600;
+    cursor: pointer; white-space: nowrap; min-width: 160px; text-align: center;
+  }
+  .btn-impact:hover:not(:disabled) { background: #2389c0; }
+  .btn-impact:disabled { background: #a0c9e8; cursor: not-allowed; }
+  .btn-view-report {
+    padding: 8px 18px; background: #fff; color: #2d9cdb;
+    border: 1.5px solid #2d9cdb; border-radius: 6px; font-size: 12px; font-weight: 600;
+    cursor: pointer; white-space: nowrap; min-width: 160px; text-align: center;
+  }
+  .btn-view-report:hover { background: #eaf5fc; }
+  .card-error {
+    font-size: 11px; color: #e53e3e; max-width: 220px; text-align: right; line-height: 1.4;
+  }
+
+  /* Report view */
+  .report-view { display: none; flex-direction: column; }
+  .report-view.visible { display: flex; }
+
+  .report-header { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+  .btn-back {
+    padding: 6px 14px; background: transparent; color: #1b2a4a;
+    border: 1px solid #d0d5dd; border-radius: 6px; font-size: 12px; font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-back:hover { background: #f0f2f5; }
+  .report-title { font-size: 16px; font-weight: 700; color: #1b2a4a; }
+
+  /* Summary stats */
+  .stats-bar { display: flex; gap: 12px; margin-bottom: 20px; }
+  .stat-card {
+    background: #fff; border: 1px solid #e2e5ea; border-radius: 8px;
+    padding: 14px 18px; flex: 1;
+  }
+  .stat-value { font-size: 22px; font-weight: 700; color: #1b2a4a; }
+  .stat-label { font-size: 11px; color: #8a93a2; margin-top: 2px; }
+
+  /* Table toolbar */
+  .table-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .search-input {
+    flex: 1; max-width: 300px; padding: 7px 10px;
+    border: 1px solid #d0d5dd; border-radius: 6px;
+    font-size: 12px; color: #1b2a4a; outline: none; background: #fff;
+  }
+  .search-input:focus { border-color: #2d9cdb; box-shadow: 0 0 0 2px rgba(45,156,219,0.15); }
+  .result-count { font-size: 12px; color: #8a93a2; }
+  .btn-csv {
+    margin-left: auto; padding: 7px 14px; background: #fff; color: #1b2a4a;
+    border: 1px solid #d0d5dd; border-radius: 6px; font-size: 12px; font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-csv:hover { background: #f0f2f5; }
+
+  /* Table */
+  .table-wrap { background: #fff; border: 1px solid #e2e5ea; border-radius: 8px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    background: #f8f9fb; border-bottom: 1px solid #e2e5ea;
+    padding: 9px 14px; text-align: left;
+    font-size: 11px; font-weight: 600; color: #8a93a2;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    white-space: nowrap; cursor: pointer; user-select: none;
+  }
+  thead th:hover { color: #1b2a4a; }
+  thead th .sort-arrow { margin-left: 4px; opacity: 0.35; font-size: 10px; }
+  thead th.sorted-asc .sort-arrow::after { content: '▲'; opacity: 1; color: #2d9cdb; }
+  thead th.sorted-desc .sort-arrow::after { content: '▼'; opacity: 1; color: #2d9cdb; }
+  thead th:not(.sorted-asc):not(.sorted-desc) .sort-arrow::after { content: '⇅'; }
+  tbody tr { border-bottom: 1px solid #f0f2f5; transition: background 0.1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #f5f8ff; }
+  tbody td { padding: 9px 14px; color: #2c3e50; font-size: 12.5px; }
+  .empty-state {
+    padding: 32px; text-align: center; color: #8a93a2; font-size: 13px;
+  }
+
+  /* Errors notice */
+  .errors-notice {
+    background: #fff8f0; border: 1px solid #fbd38d; border-radius: 6px;
+    padding: 10px 14px; font-size: 12px; color: #744210; margin-bottom: 14px;
+  }
+  .errors-notice summary { cursor: pointer; font-weight: 600; }
+  .errors-notice ul { margin-top: 6px; padding-left: 16px; line-height: 1.7; }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-logo">D</div>
+  <div class="sidebar-icon">⌂</div>
+  <div class="sidebar-icon">👤</div>
+  <div class="sidebar-icon active">📡</div>
+  <div class="sidebar-icon">🔑</div>
+  <div class="sidebar-icon">📊</div>
+</div>
+
+<div class="main">
+  <div class="topbar">
+    <span class="topbar-title">Communications Impact</span>
+    <span class="topbar-meta">Duo MSP Admin Tools</span>
+  </div>
+
+  <div class="content">
+
+    <!-- Cards view -->
+    <div id="cardsView">
+
+      <!-- Credentials panel -->
+      <p class="section-label">Accounts API Credentials</p>
+      <details class="creds-panel" id="credsPanel" open>
+        <summary>Accounts API Credentials</summary>
+        <div class="creds-fields">
+          <div class="field-group">
+            <label>Integration Key (IKEY)</label>
+            <input type="text" id="ikey" placeholder="DIxxxxxxxxxxxxxxxxxx" autocomplete="off" spellcheck="false">
+          </div>
+          <div class="field-group">
+            <label>Secret Key (SKEY)</label>
+            <input type="password" id="skey" placeholder="••••••••••••••••••••" autocomplete="off">
+          </div>
+          <div class="field-group">
+            <label>API Hostname</label>
+            <input type="text" id="host" placeholder="api-xxxxxxxx.duosecurity.com" autocomplete="off" spellcheck="false">
+          </div>
+          <button class="btn-save" onclick="saveCreds()">Save</button>
+        </div>
+        <div class="creds-saved-note" id="savedNote">Credentials saved to localStorage.</div>
+      </details>
+
+      <!-- Communication cards -->
+      <p class="section-label">Technical Communications</p>
+      <div class="cards-grid">
+
+        <!-- Card 1: iOS/Android EOS -->
+        <div class="comm-card" id="card-ios_android_eos">
+          <div class="comm-card-body">
+            <div class="comm-card-meta">September 2025</div>
+            <div class="comm-card-title">Duo Mobile End of Support: iOS 16 &amp; Android 11</div>
+            <div class="comm-card-desc">
+              Duo Mobile will end support for iOS 16 and Android 11. Users on these versions
+              will lose access on <strong>April 16, 2026</strong>. Identify affected devices
+              before the deadline to plan migration.
+            </div>
+          </div>
+          <div class="comm-card-actions">
+            <button class="btn-impact" onclick="runImpact('ios_android_eos', this)">Get Impact Report</button>
+            <div class="card-error hidden" id="err-ios_android_eos"></div>
+          </div>
+        </div>
+
+        <!-- Card 2: Duo Desktop Update -->
+        <div class="comm-card" id="card-duo_desktop_update">
+          <div class="comm-card-body">
+            <div class="comm-card-meta">October 2025</div>
+            <div class="comm-card-title">Manually Update Duo Desktop Required</div>
+            <div class="comm-card-desc">
+              Windows users on Duo Desktop versions earlier than <strong>7.12</strong> must manually
+              update — automatic updates are broken on those versions. Identify affected endpoints
+              so users can be notified.
+            </div>
+          </div>
+          <div class="comm-card-actions">
+            <button class="btn-impact" onclick="runImpact('duo_desktop_update', this)">Get Impact Report</button>
+            <div class="card-error hidden" id="err-duo_desktop_update"></div>
+          </div>
+        </div>
+
+        <!-- Card 3: CA Bundle Expiration -->
+        <div class="comm-card" id="card-ca_bundle_expiration">
+          <div class="comm-card-body">
+            <div class="comm-card-meta">February 2026</div>
+            <div class="comm-card-title">MSPs: Upcoming CA Bundle Expiration</div>
+            <div class="comm-card-desc">
+              The certificate authority bundle expired on <strong>February 2, 2026</strong>.
+              Check the Unsupported Clients Log for users and applications that may be impacted
+              by outdated client software.
+            </div>
+          </div>
+          <div class="comm-card-actions">
+            <button class="btn-impact" onclick="runImpact('ca_bundle_expiration', this)">Get Impact Report</button>
+            <div class="card-error hidden" id="err-ca_bundle_expiration"></div>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /cardsView -->
+
+    <!-- Report view -->
+    <div id="reportView" class="report-view">
+      <div class="report-header">
+        <button class="btn-back" onclick="showCards()">&#8592; Back</button>
+        <span class="report-title" id="reportTitle"></span>
+      </div>
+
+      <div class="stats-bar">
+        <div class="stat-card">
+          <div class="stat-value" id="statAffected">—</div>
+          <div class="stat-label">Affected Users / Devices</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statScanned">—</div>
+          <div class="stat-label">Accounts Scanned</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statAffectedAccounts">—</div>
+          <div class="stat-label">Accounts with Affected Users</div>
+        </div>
+      </div>
+
+      <details class="errors-notice hidden" id="errorsNotice">
+        <summary id="errorsNoticeTitle">Warnings</summary>
+        <ul id="errorsNoticeList"></ul>
+      </details>
+
+      <div class="table-toolbar">
+        <input class="search-input" type="text" id="tableSearch" placeholder="Search…" oninput="filterReportTable()">
+        <span class="result-count" id="tableCount"></span>
+        <button class="btn-csv" onclick="exportCsv()">Export CSV</button>
+      </div>
+
+      <div class="table-wrap">
+        <table id="reportTable">
+          <thead id="reportThead"></thead>
+          <tbody id="reportTbody"></tbody>
+        </table>
+        <div class="empty-state hidden" id="emptyState">No affected users or devices found.</div>
+      </div>
+    </div><!-- /reportView -->
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<script>
+// ---------------------------------------------------------------------------
+// Config per comm_id
+// ---------------------------------------------------------------------------
+const COMMS = {
+  ios_android_eos: {
+    title: 'Duo Mobile End of Support: iOS 16 & Android 11',
+    columns: [
+      { key: 'account_name', label: 'Account Name' },
+      { key: 'username',     label: 'Username' },
+      { key: 'platform',     label: 'Platform' },
+      { key: 'os_version',   label: 'OS Version' },
+      { key: 'phone_number', label: 'Phone Number' },
+    ],
+  },
+  duo_desktop_update: {
+    title: 'Manually Update Duo Desktop Required',
+    columns: [
+      { key: 'account_name',        label: 'Account Name' },
+      { key: 'username',            label: 'Username' },
+      { key: 'os',                  label: 'OS' },
+      { key: 'duo_desktop_version', label: 'Duo Desktop Version' },
+    ],
+  },
+  ca_bundle_expiration: {
+    title: 'MSPs: Upcoming CA Bundle Expiration',
+    columns: [
+      { key: 'account_name', label: 'Account Name' },
+      { key: 'username',     label: 'Username' },
+      { key: 'client',       label: 'Client' },
+      { key: 'application',  label: 'Application' },
+      { key: 'version',      label: 'Version' },
+    ],
+  },
+};
+
+// ---------------------------------------------------------------------------
+// State
+// ---------------------------------------------------------------------------
+let currentCommId = null;
+let allRows = [];
+let filteredRows = [];
+let sortCol = null;
+let sortDir = 'asc';
+const cachedReports = {}; // commId -> data
+
+// ---------------------------------------------------------------------------
+// Credentials persistence
+// ---------------------------------------------------------------------------
+(function loadCreds() {
+  const stored = JSON.parse(localStorage.getItem('duo_creds') || '{}');
+  if (stored.ikey) document.getElementById('ikey').value = stored.ikey;
+  if (stored.skey) document.getElementById('skey').value = stored.skey;
+  if (stored.host) document.getElementById('host').value = stored.host;
+})();
+
+function saveCreds() {
+  const creds = {
+    ikey: document.getElementById('ikey').value.trim(),
+    skey: document.getElementById('skey').value.trim(),
+    host: document.getElementById('host').value.trim(),
+  };
+  localStorage.setItem('duo_creds', JSON.stringify(creds));
+  const note = document.getElementById('savedNote');
+  note.style.display = 'block';
+  setTimeout(() => { note.style.display = 'none'; }, 2500);
+}
+
+function getCreds() {
+  return {
+    ikey: document.getElementById('ikey').value.trim(),
+    skey: document.getElementById('skey').value.trim(),
+    host: document.getElementById('host').value.trim(),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Run impact report
+// ---------------------------------------------------------------------------
+async function runImpact(commId, btn) {
+  const creds = getCreds();
+  if (!creds.ikey || !creds.skey || !creds.host) {
+    showCardError(commId, 'Please enter all three credential fields before running.');
+    return;
+  }
+
+  clearCardError(commId);
+  btn.disabled = true;
+  btn.textContent = 'Loading…';
+
+  try {
+    const resp = await fetch(`/api/impact/${commId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(creds),
+    });
+
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      showCardError(commId, data.error || `Server error (${resp.status})`);
+      return;
+    }
+
+    cachedReports[commId] = data;
+    showViewReportButton(commId);
+    showReport(commId, data);
+  } catch (err) {
+    showCardError(commId, `Could not reach server at localhost:5000. Is server.py running? (${err.message})`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Get Impact Report';
+  }
+}
+
+function showViewReportButton(commId) {
+  const existing = document.getElementById(`view-btn-${commId}`);
+  if (existing) return; // already added
+  const actions = document.querySelector(`#card-${commId} .comm-card-actions`);
+  const btn = document.createElement('button');
+  btn.className = 'btn-view-report';
+  btn.id = `view-btn-${commId}`;
+  btn.textContent = 'View Report';
+  btn.onclick = () => showReport(commId, cachedReports[commId]);
+  actions.insertBefore(btn, actions.firstChild);
+}
+
+function showCardError(commId, msg) {
+  const el = document.getElementById(`err-${commId}`);
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+
+function clearCardError(commId) {
+  const el = document.getElementById(`err-${commId}`);
+  el.textContent = '';
+  el.classList.add('hidden');
+}
+
+// ---------------------------------------------------------------------------
+// Report view
+// ---------------------------------------------------------------------------
+function showReport(commId, data) {
+  currentCommId = commId;
+  allRows = data.rows || [];
+  filteredRows = [...allRows];
+  sortCol = null;
+  sortDir = 'asc';
+
+  const comm = COMMS[commId];
+  document.getElementById('reportTitle').textContent = comm.title;
+
+  // Stats
+  const s = data.summary || {};
+  document.getElementById('statAffected').textContent = (s.total_affected ?? allRows.length).toLocaleString();
+  document.getElementById('statScanned').textContent = (s.total_accounts_scanned ?? '—').toLocaleString();
+  document.getElementById('statAffectedAccounts').textContent = (s.total_affected_accounts ?? '—').toLocaleString();
+
+  // Errors/warnings
+  const errors = (s.errors || []).filter(Boolean);
+  const notice = document.getElementById('errorsNotice');
+  if (errors.length > 0) {
+    document.getElementById('errorsNoticeTitle').textContent = `${errors.length} warning${errors.length > 1 ? 's' : ''} (some accounts may be incomplete)`;
+    const ul = document.getElementById('errorsNoticeList');
+    ul.innerHTML = errors.map(e => `<li>${escHtml(e)}</li>`).join('');
+    notice.classList.remove('hidden');
+  } else {
+    notice.classList.add('hidden');
+  }
+
+  // Build thead
+  const thead = document.getElementById('reportThead');
+  thead.innerHTML = '<tr>' + comm.columns.map(c =>
+    `<th onclick="sortBy('${c.key}')" id="th-${c.key}">${escHtml(c.label)}<span class="sort-arrow"></span></th>`
+  ).join('') + '</tr>';
+
+  // Clear search
+  document.getElementById('tableSearch').value = '';
+
+  renderTable();
+
+  // Switch views
+  document.getElementById('cardsView').style.display = 'none';
+  const rv = document.getElementById('reportView');
+  rv.style.display = 'flex';
+}
+
+function showCards() {
+  document.getElementById('reportView').style.display = 'none';
+  document.getElementById('cardsView').style.display = 'block';
+}
+
+// ---------------------------------------------------------------------------
+// Table rendering
+// ---------------------------------------------------------------------------
+function renderTable() {
+  const comm = COMMS[currentCommId];
+  const tbody = document.getElementById('reportTbody');
+  const emptyState = document.getElementById('emptyState');
+
+  // Update sort indicators
+  comm.columns.forEach(c => {
+    const th = document.getElementById(`th-${c.key}`);
+    if (!th) return;
+    th.classList.remove('sorted-asc', 'sorted-desc');
+    if (sortCol === c.key) {
+      th.classList.add(sortDir === 'asc' ? 'sorted-asc' : 'sorted-desc');
+    }
+  });
+
+  if (filteredRows.length === 0) {
+    tbody.innerHTML = '';
+    emptyState.classList.remove('hidden');
+  } else {
+    emptyState.classList.add('hidden');
+    tbody.innerHTML = filteredRows.map(row =>
+      '<tr>' + comm.columns.map(c =>
+        `<td>${escHtml(row[c.key] ?? '')}</td>`
+      ).join('') + '</tr>'
+    ).join('');
+  }
+
+  document.getElementById('tableCount').textContent =
+    filteredRows.length === allRows.length
+      ? `${allRows.length} result${allRows.length !== 1 ? 's' : ''}`
+      : `${filteredRows.length} of ${allRows.length} result${allRows.length !== 1 ? 's' : ''}`;
+}
+
+function filterReportTable() {
+  const q = document.getElementById('tableSearch').value.toLowerCase();
+  if (!q) {
+    filteredRows = [...allRows];
+  } else {
+    filteredRows = allRows.filter(row =>
+      Object.values(row).some(v => String(v ?? '').toLowerCase().includes(q))
+    );
+  }
+  if (sortCol) applySort();
+  renderTable();
+}
+
+function sortBy(col) {
+  if (sortCol === col) {
+    sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortCol = col;
+    sortDir = 'asc';
+  }
+  applySort();
+  renderTable();
+}
+
+function applySort() {
+  filteredRows.sort((a, b) => {
+    const av = String(a[sortCol] ?? '').toLowerCase();
+    const bv = String(b[sortCol] ?? '').toLowerCase();
+    const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+    return sortDir === 'asc' ? cmp : -cmp;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// CSV export
+// ---------------------------------------------------------------------------
+function exportCsv() {
+  if (!currentCommId || allRows.length === 0) return;
+  const comm = COMMS[currentCommId];
+  const header = comm.columns.map(c => csvCell(c.label)).join(',');
+  const body = allRows.map(row =>
+    comm.columns.map(c => csvCell(row[c.key] ?? '')).join(',')
+  ).join('\n');
+  const csv = header + '\n' + body;
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `impact_${currentCommId}_${timestamp()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function csvCell(v) {
+  const s = String(v);
+  return s.includes(',') || s.includes('"') || s.includes('\n')
+    ? '"' + s.replace(/"/g, '""') + '"'
+    : s;
+}
+
+function timestamp() {
+  return new Date().toISOString().replace(/[T:]/g, '_').slice(0, 19);
+}
+
+// ---------------------------------------------------------------------------
+// Utilities
+// ---------------------------------------------------------------------------
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+</script>
+
+</body>
+</html>
