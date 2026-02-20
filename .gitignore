@@ -2,4 +2,5 @@
 my-env
 *.csv
 *.pdf
+*.zip
 duo.conf
