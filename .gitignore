@@ -3,4 +3,5 @@ my-env
 *.csv
 *.pdf
 *.zip
+.venv
 duo.conf
