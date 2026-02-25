@@ -5,3 +5,4 @@ my-env
 *.zip
 .venv
 duo.conf
+__pycache__

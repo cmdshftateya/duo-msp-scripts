@@ -27,14 +27,14 @@ Some scripts (`username_collision_report.py`, `msp_user_report.py`) also support
 
 ## Running Scripts
 
-Each script is standalone and run directly:
+Standalone scripts live in the `scripts/` directory:
 ```bash
-python retrieve_account_list.py
-python msp_user_report.py
-python admin_manager.py
-python child_account_hard_user_limit.py --account_id DA<id> --action get
-python create_child_account.py --batch "Account1,Account2"
-python username_collision_report.py
+python scripts/retrieve_account_list.py
+python scripts/msp_user_report.py
+python scripts/admin_manager.py
+python scripts/child_account_hard_user_limit.py --account_id DA<id> --action get
+python scripts/create_child_account.py --batch "Account1,Account2"
+python scripts/username_collision_report.py
 ```
 
 ## Architecture
@@ -63,8 +63,8 @@ The common pattern across reporting scripts:
 Failures on individual child accounts are logged and skipped; traversal continues.
 
 ### Custom API Extensions
-- `child_account_hard_user_limit.py` extends `duo_client.admin.AccountAdmin` to call the undocumented `/admin/v1/billing/user_limit` endpoint
-- `admin_manager.py` wraps `duo_client.Admin` with role mapping and interactive CRUD operations
+- `scripts/child_account_hard_user_limit.py` extends `duo_client.admin.AccountAdmin` to call the undocumented `/admin/v1/billing/user_limit` endpoint
+- `scripts/admin_manager.py` wraps `duo_client.Admin` with role mapping and interactive CRUD operations
 
 ### Output Formats
 - **Console**: `tabulate` for formatted tables
