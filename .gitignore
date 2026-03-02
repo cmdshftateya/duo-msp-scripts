@@ -6,3 +6,4 @@ my-env
 .venv
 duo.conf
 __pycache__
+.Rhistory
