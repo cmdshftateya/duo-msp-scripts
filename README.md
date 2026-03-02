@@ -24,9 +24,9 @@ export DUO_ACCOUNTS_HOST='your-accounts-api-hostname'
 ## Repository Structure
 
 ```
-scripts/                          Standalone Python scripts
-communications-impact-report/     Web-based communications impact report tool
-duo-subaccount-hard-user-limit/   PowerShell module for managing user limits
+scripts/                                          Standalone Python scripts and modules
+scripts/delegated-access-collision-finder/        Report on username collisions across delegated Duo accounts
+scripts/duo-subaccount-hard-user-limit/           PowerShell module for managing child account user limits
 ```
 
 ## Running Scripts
